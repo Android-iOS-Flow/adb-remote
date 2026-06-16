@@ -2,6 +2,7 @@
 // hiện toast khi người khác chạy / script kết thúc, tránh chạy trùng.
 
 import { $, LS, wsProto } from "./core.js";
+import { t } from "./i18n.js";
 
 let evWs = null;
 let reconnectTimer = null;
@@ -50,12 +51,12 @@ function handle(msg) {
   } else if (msg.type === "started") {
     running.set(msg.id, msg);
     emitChange();
-    if (msg.who !== clientName()) toast(`▶ "${msg.label}" started by ${msg.who}`, "info");
+    if (msg.who !== clientName()) toast(t("scripts.startedToast", { label: msg.label, who: msg.who }), "info");
   } else if (msg.type === "finished") {
     running.delete(msg.id);
     emitChange();
-    const by = msg.who !== clientName() ? ` by ${msg.who}` : "";
-    toast(`■ "${msg.label}" finished${by} — exit ${msg.code}`, msg.code === 0 ? "ok" : "warn");
+    const by = msg.who !== clientName() ? t("scripts.finishedBy", { who: msg.who }) : "";
+    toast(t("scripts.finishedToast", { label: msg.label, by, code: msg.code }), msg.code === 0 ? "ok" : "warn");
   }
 }
 

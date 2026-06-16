@@ -1,6 +1,7 @@
 // logcat.js — Panel logcat: stream, lọc (cấp độ/tag/text), highlight, xuất file, resize.
 
 import { $, LS, wsProto } from "./core.js";
+import { t } from "./i18n.js";
 
 const LOG_MAX = 5000;                 // số dòng tối đa giữ trong bộ nhớ
 const LOG_MIN_W = 280;
@@ -90,23 +91,23 @@ function setLogState(label, running) {
 
 function logStart() {
   const token = $("token").value.trim();
-  if (!token) { alert("Enter token first."); return; }
+  if (!token) { alert(t("logcat.enterTokenFirst")); return; }
   if (logWs) { logWs.onclose = null; logWs.close(); logWs = null; }
   const serial = $("devices").value;
   const url = `${wsProto()}://${location.host}/logcat?token=${encodeURIComponent(token)}&serial=${encodeURIComponent(serial)}`;
-  setLogState("connecting…", true);
+  setLogState(t("logcat.connecting"), true);
   logWs = new WebSocket(url); logWs.binaryType = "arraybuffer";
-  logWs.onopen = () => setLogState("streaming", true);
+  logWs.onopen = () => setLogState(t("logcat.streaming"), true);
   logWs.onmessage = (ev) => {
     if (ev.data instanceof ArrayBuffer) addLogChunk(new TextDecoder().decode(ev.data));
     else addLogChunk(String(ev.data));
   };
-  logWs.onclose = () => { logWs = null; setLogState("stopped", false); };
-  logWs.onerror = () => setLogState("error", false);
+  logWs.onclose = () => { logWs = null; setLogState(t("logcat.stopped"), false); };
+  logWs.onerror = () => setLogState(t("logcat.error"), false);
 }
 function logStop() {
   if (logWs) { logWs.onclose = null; logWs.close(); logWs = null; }
-  setLogState("stopped", false);
+  setLogState(t("logcat.stopped"), false);
 }
 
 function downloadLog() {

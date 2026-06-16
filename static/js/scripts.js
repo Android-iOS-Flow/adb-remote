@@ -1,6 +1,7 @@
 // scripts.js — Popup chạy .bat: stream log + gửi stdin + cảnh báo chạy trùng.
 
 import { $, wsProto } from "./core.js";
+import { t } from "./i18n.js";
 import { clientName, findRunningByPath, onRunningChange, getRunning } from "./events.js";
 
 let runWs = null;
@@ -23,15 +24,15 @@ function setRunState(label, running) {
 
 async function loadScripts() {
   const token = $("token").value.trim();
-  if (!token) { alert("Enter token first."); return; }
+  if (!token) { alert(t("conn.enterTokenFirst")); return; }
   try {
     const res = await fetch(`/api/scripts?token=${encodeURIComponent(token)}`);
-    if (!res.ok) { alert("Wrong token or server error."); return; }
+    if (!res.ok) { alert(t("conn.wrongToken")); return; }
     const data = await res.json();
-    $("scriptDir").textContent = data.manifest ? "manifest: " + data.manifest : "";
+    $("scriptDir").textContent = data.manifest ? t("scripts.manifest", { path: data.manifest }) : "";
     lastItems = data.items || [];
     renderList();
-  } catch (e) { alert("Failed to load scripts: " + e); }
+  } catch (e) { alert(t("scripts.loadFailed", { err: e })); }
 }
 
 // Vẽ danh sách script, kèm dấu "đang chạy (bởi ai)".
@@ -40,7 +41,7 @@ function renderList() {
   if (!ul) return;
   ul.innerHTML = "";
   if (lastItems.length === 0) {
-    ul.innerHTML = '<li class="text-xs text-slate-400 px-2 py-1">No scripts found</li>';
+    ul.innerHTML = `<li class="text-xs text-slate-400 px-2 py-1">${t("scripts.noScripts")}</li>`;
     return;
   }
   for (const it of lastItems) {
@@ -52,7 +53,7 @@ function renderList() {
     if (it.path === selectedScript) li.classList.add("bg-blue-100", "text-blue-700");
     const name = document.createElement("span");
     name.className = "truncate flex-1";
-    name.textContent = it.label + (miss ? "  (missing)" : "");
+    name.textContent = it.label + (miss ? "  " + t("scripts.missing") : "");
     li.appendChild(name);
     if (run) {
       const badge = document.createElement("span");
@@ -85,7 +86,7 @@ function renderRunning() {
   const now = $("runningNow");
   if (now) {
     now.textContent = r.size
-      ? "Running: " + [...r.values()].map((v) => `${v.label} (${v.who})`).join(", ")
+      ? t("scripts.runningNow", { list: [...r.values()].map((v) => `${v.label} (${v.who})`).join(", ") })
       : "";
   }
   if (!$("scriptsModal").classList.contains("hidden")) renderList();   // cập nhật dấu trong list
@@ -95,13 +96,13 @@ function runScript() {
   if (!selectedScript) return;
   // Cảnh báo nếu script này đang được người khác (hoặc chính bạn) chạy.
   const r = findRunningByPath(selectedScript);
-  if (r && !confirm(`"${r.label}" is already running (started by ${r.who}).\nRun it anyway?`)) return;
+  if (r && !confirm(t("scripts.alreadyRunning", { label: r.label, who: r.who }))) return;
   const token = $("token").value.trim();
   if (runWs) { runWs.onclose = null; runWs.close(); runWs = null; }
   const url = `${wsProto()}://${location.host}/run?token=${encodeURIComponent(token)}` +
               `&path=${encodeURIComponent(selectedScript)}&who=${encodeURIComponent(clientName())}`;
-  termWrite(`\n=== run ${selectedScript} ===\n`);
-  setRunState("running", true);
+  termWrite(t("scripts.runHeader", { path: selectedScript }));
+  setRunState(t("scripts.running"), true);
   $("runBtn").disabled = true;
 
   runWs = new WebSocket(url);
@@ -109,16 +110,16 @@ function runScript() {
     let msg; try { msg = JSON.parse(ev.data); } catch { return; }
     if (msg.type === "out") termWrite(msg.data);
     else if (msg.type === "exit") {
-      termWrite(`\n=== exited with code ${msg.code} ===\n`);
+      termWrite(t("scripts.exitedLine", { code: msg.code }));
       const w = runWs; runWs = null;
       if (w) { w.onclose = null; try { w.close(); } catch (_) {} }
-      setRunState(`exited (${msg.code})`, false);
+      setRunState(t("scripts.exited", { code: msg.code }), false);
     }
-    else if (msg.type === "error") termWrite(`\n[error] ${msg.message}\n`);
+    else if (msg.type === "error") termWrite(t("scripts.errorLine", { message: msg.message }));
     else if (msg.type === "started") { /* noop */ }
   };
-  runWs.onclose = () => { runWs = null; setRunState("idle", false); };
-  runWs.onerror = () => termWrite("\n[connection error]\n");
+  runWs.onclose = () => { runWs = null; setRunState(t("scripts.idle"), false); };
+  runWs.onerror = () => termWrite(t("scripts.connError"));
 }
 
 function stopScript() { if (runWs) runWs.send(JSON.stringify({ type: "kill" })); }

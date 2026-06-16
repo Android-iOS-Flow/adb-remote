@@ -1,6 +1,7 @@
 // terminal.js — Terminal web chạy lệnh adb / fastboot (stream output + stdin).
 
 import { $, wsProto } from "./core.js";
+import { t } from "./i18n.js";
 
 let tWs = null;
 let tRunning = false;
@@ -17,22 +18,22 @@ function tout(text) {
 function setRunning(running) {
   tRunning = running;
   $("termStop").disabled = !running;
-  $("termState").textContent = running ? "running" : "idle";
+  $("termState").textContent = running ? t("terminal.running") : t("terminal.idle");
 }
 
 function connect() {
   const token = $("token").value.trim();
-  if (!token) { tout("[enter token first]\n"); return; }
+  if (!token) { tout(t("terminal.enterTokenFirst")); return; }
   if (tWs) { tWs.onclose = null; tWs.close(); }
   tWs = new WebSocket(`${wsProto()}://${location.host}/terminal?token=${encodeURIComponent(token)}`);
-  tWs.onopen = () => { $("termState").textContent = "ready"; };
+  tWs.onopen = () => { $("termState").textContent = t("terminal.ready"); };
   tWs.onmessage = (ev) => {
     let msg; try { msg = JSON.parse(ev.data); } catch { return; }
     if (msg.type === "out") tout(msg.data);
-    else if (msg.type === "done") { tout(`\n[exit ${msg.code}]\n`); setRunning(false); }
+    else if (msg.type === "done") { tout(t("terminal.exitLine", { code: msg.code })); setRunning(false); }
   };
-  tWs.onclose = () => { tWs = null; setRunning(false); $("termState").textContent = "disconnected"; };
-  tWs.onerror = () => tout("\n[connection error]\n");
+  tWs.onclose = () => { tWs = null; setRunning(false); $("termState").textContent = t("terminal.disconnected"); };
+  tWs.onerror = () => tout(t("terminal.connError"));
 }
 
 function ensureConnected() {

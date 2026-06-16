@@ -70,6 +70,55 @@ async def list_devices() -> list[dict]:
     return devices
 
 
+async def probe_device(serial: Optional[str]) -> dict:
+    """
+    Kiểm tra trạng thái thiết bị để phân biệt rõ các tình huống "không có video":
+      - no_device   : adb không thấy thiết bị nào (rút cáp / tắt nguồn / chưa cấp quyền).
+      - unauthorized: thiết bị có nhưng chưa "Allow USB debugging".
+      - offline     : thiết bị ở trạng thái offline (thường đang khởi động / mất kết nối tạm).
+      - booting     : adb thấy 'device' nhưng sys.boot_completed != 1 (đang boot).
+      - ready       : đã boot xong, sẵn sàng stream.
+
+    Trả về {state, serial, reason} với reason là mô tả tiếng Việt cho UI.
+    """
+    devices = await list_devices()
+    if serial:
+        match = next((d for d in devices if d["serial"] == serial), None)
+    else:
+        match = devices[0] if devices else None
+
+    if match is None:
+        if devices:
+            return {"state": "no_device", "serial": serial or "",
+                    "reason": "Không tìm thấy thiết bị theo serial đã chọn (có thiết bị khác đang kết nối)."}
+        return {"state": "no_device", "serial": serial or "",
+                "reason": "Không có thiết bị ADB nào — kiểm tra cáp, nguồn điện thoại, hoặc adb."}
+
+    st = match.get("state", "")
+    tgt = match["serial"]
+    if st == "unauthorized":
+        return {"state": "unauthorized", "serial": tgt,
+                "reason": "Thiết bị chưa được cấp quyền — bấm 'Allow USB debugging' trên màn hình điện thoại."}
+    if st == "offline":
+        return {"state": "offline", "serial": tgt,
+                "reason": "Thiết bị đang offline — có thể đang khởi động lại hoặc mất kết nối tạm thời."}
+    if st != "device":
+        return {"state": st or "unknown", "serial": tgt,
+                "reason": f"Thiết bị ở trạng thái '{st or 'unknown'}'."}
+
+    # state == "device": có kết nối, kiểm tra đã boot xong chưa.
+    try:
+        rc, out, _ = await _run(tgt, ["shell", "getprop", "sys.boot_completed"], timeout=6.0)
+        booted = out.decode(errors="replace").strip() == "1"
+    except Exception:
+        booted = False
+    if not booted:
+        return {"state": "booting", "serial": tgt,
+                "reason": "Đã kết nối ADB nhưng hệ thống chưa khởi động xong (đang boot)."}
+    return {"state": "ready", "serial": tgt,
+            "reason": "Đã kết nối ADB và thiết bị sẵn sàng."}
+
+
 def compute_size(width: int, height: int, max_side: int) -> str:
     """
     Tính chuỗi --size cho screenrecord, giữ nguyên tỉ lệ thiết bị.
@@ -503,3 +552,188 @@ KEYEVENTS = {
 
 async def input_keyevent(serial: Optional[str], keycode: int) -> None:
     await _run(serial, ["shell", "input", "keyevent", str(keycode)], timeout=10)
+
+
+# ---------------------------------------------------------------------------
+# Quản lý file (duyệt / tải / upload / mkdir / xoá / đổi tên)
+# ---------------------------------------------------------------------------
+#
+# Mọi path gửi xuống `adb shell` đều được bọc bằng shlex.quote để tránh inject
+# và để xử lý đúng tên có khoảng trắng / ký tự đặc biệt. `adb pull` / `adb push`
+# nhận path qua argv (không qua shell trên máy chủ) nên an toàn sẵn.
+
+
+def _q(path: str) -> str:
+    """Bọc path cho shell trên thiết bị (an toàn với khoảng trắng / ký tự lạ)."""
+    return shlex.quote(path)
+
+
+def normalize_remote(path: str) -> str:
+    """
+    Chuẩn hoá path POSIX trên thiết bị: gộp '//', xử lý '.' và '..', luôn tuyệt đối.
+
+    Không đụng tới hệ thống file máy chủ - chỉ xử lý chuỗi.
+    """
+    if not path:
+        return "/sdcard"
+    path = path.replace("\\", "/")
+    if not path.startswith("/"):
+        path = "/" + path
+    parts = []
+    for seg in path.split("/"):
+        if seg in ("", "."):
+            continue
+        if seg == "..":
+            if parts:
+                parts.pop()
+            continue
+        parts.append(seg)
+    return "/" + "/".join(parts)
+
+
+# Phân tích một dòng output của `ls -lA` (định dạng toybox/Android).
+#   drwxrwx--x 4 root sdcard_rw 3452 2024-01-02 11:22 DCIM
+#   -rw-rw---- 1 root sdcard_rw  123 2024-01-02 11:22 file name.txt
+#   lrwxrwxrwx 1 root root        21 ... self -> /storage/self/primary
+_LS_RE = re.compile(
+    r"^(?P<perm>[bcdlsp-][rwxsStT-]{9})\s+"
+    r"\d+\s+\S+\s+\S+\s+"
+    r"(?P<size>\d+)\s+"
+    r"(?P<date>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})\s+"
+    r"(?P<name>.+)$"
+)
+
+
+def _parse_ls_line(line: str) -> Optional[dict]:
+    line = line.rstrip("\r\n")
+    if not line or line.startswith("total "):
+        return None
+    m = _LS_RE.match(line)
+    if not m:
+        return None
+    perm = m.group("perm")
+    name = m.group("name")
+    typ = perm[0]
+    is_dir = typ == "d"
+    is_link = typ == "l"
+    target = ""
+    if is_link and " -> " in name:
+        name, target = name.split(" -> ", 1)
+    if name in (".", ".."):
+        return None
+    return {
+        "name": name,
+        "is_dir": is_dir,
+        "is_link": is_link,
+        "link_target": target,
+        "size": int(m.group("size")),
+        "perm": perm,
+        "mtime": m.group("date"),
+    }
+
+
+async def list_dir(serial: Optional[str], path: str) -> dict:
+    """
+    Liệt kê nội dung thư mục trên thiết bị.
+
+    Trả về {"path", "entries":[...], "error"?}. Mỗi entry có:
+    name, is_dir, is_link, link_target, size, perm, mtime.
+
+    Với symlink, ta thử dò xem nó có trỏ tới thư mục không (để duyệt tiếp được).
+    """
+    path = normalize_remote(path)
+    # -L không dùng để giữ thông tin symlink; -A bỏ . và .. ; --color=never tránh mã màu.
+    rc, out, err = await _run(serial, ["shell", f"ls -lA {_q(path)}"], timeout=20)
+    text = out.decode("utf-8", "replace")
+    etext = err.decode("utf-8", "replace").strip()
+    entries = []
+    for line in text.splitlines():
+        ent = _parse_ls_line(line)
+        if ent:
+            entries.append(ent)
+    # Một số lỗi (No such file, Permission denied) in ra stderr lẫn stdout.
+    err_msg = ""
+    low = (text + " " + etext).lower()
+    if not entries and ("no such file" in low or "permission denied" in low or "not a directory" in low):
+        err_msg = etext or text.strip() or "Không truy cập được."
+    # Phân giải symlink -> thư mục: thử `ls -d` mục tiêu (nhẹ nhàng, không bắt buộc).
+    links = [e for e in entries if e["is_link"]]
+    for e in links:
+        child = path.rstrip("/") + "/" + e["name"]
+        rc2, out2, _ = await _run(serial, ["shell", f"ls -ld {_q(child)}/"], timeout=10)
+        if rc2 == 0 and out2.decode("utf-8", "replace").strip().startswith("d"):
+            e["is_dir"] = True
+    # Sắp xếp: thư mục trước, rồi theo tên (không phân biệt hoa thường).
+    entries.sort(key=lambda e: (not e["is_dir"], e["name"].lower()))
+    return {"path": path, "entries": entries, "error": err_msg}
+
+
+async def stat_remote(serial: Optional[str], path: str) -> dict:
+    """Lấy thông tin một path (tồn tại / là thư mục / kích thước)."""
+    path = normalize_remote(path)
+    rc, out, _ = await _run(serial, ["shell", f"ls -ldA {_q(path)}"], timeout=10)
+    text = out.decode("utf-8", "replace").strip()
+    exists = rc == 0 and bool(text) and "no such file" not in text.lower()
+    is_dir = text.startswith("d") if exists else False
+    return {"path": path, "exists": exists, "is_dir": is_dir}
+
+
+async def mkdir_remote(serial: Optional[str], path: str) -> tuple[bool, str]:
+    path = normalize_remote(path)
+    rc, _, err = await _run(serial, ["shell", f"mkdir -p {_q(path)}"], timeout=15)
+    return rc == 0, err.decode("utf-8", "replace").strip()
+
+
+async def remove_remote(serial: Optional[str], path: str) -> tuple[bool, str]:
+    """Xoá file hoặc thư mục (đệ quy). Path tuyệt đối, chặn xoá gốc '/'."""
+    path = normalize_remote(path)
+    if path == "/" or not path:
+        return False, "Từ chối: không thể xoá thư mục gốc."
+    rc, _, err = await _run(serial, ["shell", f"rm -rf {_q(path)}"], timeout=30)
+    return rc == 0, err.decode("utf-8", "replace").strip()
+
+
+async def move_remote(serial: Optional[str], src: str, dst: str) -> tuple[bool, str]:
+    src = normalize_remote(src)
+    dst = normalize_remote(dst)
+    if src in ("/", ""):
+        return False, "Nguồn không hợp lệ."
+    rc, _, err = await _run(serial, ["shell", f"mv -f {_q(src)} {_q(dst)}"], timeout=30)
+    return rc == 0, err.decode("utf-8", "replace").strip()
+
+
+async def push_file(serial: Optional[str], local_path: str, remote_path: str) -> tuple[bool, str]:
+    """Đẩy 1 file từ máy chủ lên thiết bị (adb push, không qua shell)."""
+    remote_path = normalize_remote(remote_path)
+    rc, out, err = await _run(serial, ["push", local_path, remote_path], timeout=600)
+    msg = (err.decode("utf-8", "replace") + out.decode("utf-8", "replace")).strip()
+    return rc == 0, msg
+
+
+async def stream_pull(serial: Optional[str], path: str) -> AsyncIterator[bytes]:
+    """
+    Stream nội dung 1 file từ thiết bị về (dùng `exec-out cat`).
+
+    Hợp với việc cho trình duyệt tải trực tiếp mà không cần lưu tạm trên máy chủ.
+    Lưu ý: chỉ dùng cho FILE (không phải thư mục) - kiểm tra trước khi gọi.
+    """
+    path = normalize_remote(path)
+    proc = await asyncio.create_subprocess_exec(
+        *_base_cmd(serial), "exec-out", f"cat {_q(path)}",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        assert proc.stdout is not None
+        while True:
+            chunk = await proc.stdout.read(65536)
+            if not chunk:
+                break
+            yield chunk
+    finally:
+        if proc.returncode is None:
+            try:
+                proc.kill()
+            except ProcessLookupError:
+                pass
+            await proc.wait()

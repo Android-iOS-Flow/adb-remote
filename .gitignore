@@ -1,2 +1,4 @@
 .env
 logs/stdin.log
+*.pyc
+/scripts/audi-06

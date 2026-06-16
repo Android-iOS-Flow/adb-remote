@@ -98,9 +98,73 @@ if os.name == "nt":
         _kernel32.CloseHandle.restype = wintypes.BOOL
         _kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
 
+        # --- API phục vụ tạo tiến trình "suspended" rồi resume sau khi gán job ---
+        # Mục đích: gán cmd.exe vào job KHI NÓ CHƯA CHẠY (chưa sinh tiến trình con
+        # nào), nên mọi tiến trình .bat tạo ra sau này chắc chắn nằm trong job ->
+        # đóng hẳn khe hở "con thoát khỏi job" khiến Stop trước đây không ăn.
+        CREATE_SUSPENDED = 0x00000004
+        THREAD_SUSPEND_RESUME = 0x0002
+        TH32CS_SNAPTHREAD = 0x00000004
+
+        class _THREADENTRY32(ctypes.Structure):
+            _fields_ = [
+                ("dwSize", wintypes.DWORD),
+                ("cntUsage", wintypes.DWORD),
+                ("th32ThreadID", wintypes.DWORD),
+                ("th32OwnerProcessID", wintypes.DWORD),
+                ("tpBasePri", ctypes.c_long),
+                ("tpDeltaPri", ctypes.c_long),
+                ("dwFlags", wintypes.DWORD),
+            ]
+
+        _kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        _kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+        _kernel32.Thread32First.restype = wintypes.BOOL
+        _kernel32.Thread32First.argtypes = [wintypes.HANDLE, ctypes.POINTER(_THREADENTRY32)]
+        _kernel32.Thread32Next.restype = wintypes.BOOL
+        _kernel32.Thread32Next.argtypes = [wintypes.HANDLE, ctypes.POINTER(_THREADENTRY32)]
+        _kernel32.OpenThread.restype = wintypes.HANDLE
+        _kernel32.OpenThread.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        _kernel32.ResumeThread.restype = wintypes.DWORD
+        _kernel32.ResumeThread.argtypes = [wintypes.HANDLE]
+
         _JOB_OK = True
     except Exception:
         _JOB_OK = False
+
+
+def _resume_process(pid: int) -> bool:
+    """
+    Đánh thức (resume) mọi luồng của tiến trình `pid`.
+
+    Tiến trình vừa tạo bằng CREATE_SUSPENDED có đúng một luồng chính đang bị
+    treo; ta liệt kê luồng qua Toolhelp snapshot rồi ResumeThread. Trả True nếu
+    đã resume được ít nhất một luồng.
+    """
+    if not _JOB_OK:
+        return False
+    INVALID = wintypes.HANDLE(-1).value
+    snap = _kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0)
+    if not snap or snap == INVALID:
+        return False
+    try:
+        entry = _THREADENTRY32()
+        entry.dwSize = ctypes.sizeof(_THREADENTRY32)
+        ok = _kernel32.Thread32First(snap, ctypes.byref(entry))
+        resumed = False
+        while ok:
+            if entry.th32OwnerProcessID == pid:
+                h = _kernel32.OpenThread(THREAD_SUSPEND_RESUME, False, entry.th32ThreadID)
+                if h:
+                    _kernel32.ResumeThread(h)
+                    _kernel32.CloseHandle(h)
+                    resumed = True
+            ok = _kernel32.Thread32Next(snap, ctypes.byref(entry))
+        return resumed
+    except Exception:
+        return False
+    finally:
+        _kernel32.CloseHandle(snap)
 
 
 def _create_job():
@@ -184,6 +248,12 @@ def _spawn(path: str, cwd: str):
         cmd = [path]
 
     job = _create_job()  # None nếu ngoài Windows / không khả dụng
+
+    # Khi có job, tạo cmd.exe ở trạng thái SUSPENDED để gán job TRƯỚC khi nó kịp
+    # chạy dòng .bat đầu tiên. Nhờ vậy không còn khe hở: mọi tiến trình con/cháu
+    # (kể cả tiến trình adb/fastboot tách rời) đều sinh ra BÊN TRONG job, nên một
+    # lần TerminateJobObject là giết sạch cây từ gốc.
+    creationflags = CREATE_SUSPENDED if (os.name == "nt" and job is not None) else 0
     proc = subprocess.Popen(
         cmd,
         cwd=cwd,
@@ -191,14 +261,35 @@ def _spawn(path: str, cwd: str):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         bufsize=0,
+        creationflags=creationflags,
     )
 
     if job is not None:
-        # Gán NGAY sau khi tạo: cmd.exe vừa khởi động, chưa kịp sinh tiến trình
-        # con, nên mọi tiến trình .bat tạo ra sau đó đều nằm trong job. Nếu gán
-        # thất bại (hiếm - vd cmd.exe đã ở trong job cấm lồng), bỏ job và để
+        assigned = _assign_to_job(job, proc)
+        if creationflags:  # đã tạo ở trạng thái suspended -> cần resume
+            # Luôn đánh thức tiến trình, bất kể gán job thành công hay không, để
+            # nó không bao giờ bị treo vĩnh viễn ở trạng thái suspended.
+            if not _resume_process(proc.pid):
+                # Không resume được (rất hiếm): không để lại tiến trình treo.
+                # Giết nó rồi tạo lại theo cách thường (chấp nhận khe hở nhỏ +
+                # fallback taskkill /T) còn hơn để treo.
+                try:
+                    kill_tree(proc, job if assigned else None)
+                except Exception:
+                    pass
+                _close_job(job)
+                proc = subprocess.Popen(
+                    cmd, cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT, bufsize=0,
+                )
+                job = _create_job()
+                if job is not None and not _assign_to_job(job, proc):
+                    _close_job(job)
+                    job = None
+                return proc, job
+        # Gán thất bại (hiếm - vd cmd.exe ở trong job cấm lồng): bỏ job, để
         # taskkill /T lo phần còn lại.
-        if not _assign_to_job(job, proc):
+        if not assigned:
             _close_job(job)
             job = None
 

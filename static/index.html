@@ -17,7 +17,7 @@
 <!-- Header -->
 <header class="bg-white border-b border-slate-200 px-4 py-2.5 flex items-center gap-3 shadow-sm z-20">
   <button id="toggleSettings" class="inline-flex items-center justify-center w-9 h-9 rounded-lg
-        text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" title="Toggle menu">
+        text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" data-i18n-title="header.toggleMenu" title="Toggle menu">
     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
          stroke="currentColor" stroke-width="2">
       <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
@@ -25,48 +25,102 @@
   </button>
   <div class="flex items-center gap-2">
     <div class="w-7 h-7 rounded-lg bg-blue-600 text-white grid place-items-center font-bold text-sm">A</div>
-    <h1 class="font-semibold text-[15px] tracking-tight">ADB Web Control</h1>
+    <h1 class="font-semibold text-[15px] tracking-tight" data-i18n="app.title">ADB Web Control</h1>
   </div>
   <span id="status" class="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-slate-500
         bg-slate-100 rounded-full px-2.5 py-1">
-    <span id="dot" class="w-2 h-2 rounded-full bg-slate-400"></span><span id="statusText">Not connected</span>
+    <span id="dot" class="w-2 h-2 rounded-full bg-slate-400"></span><span id="statusText" data-i18n="status.notConnected">Not connected</span>
   </span>
 
+  <!-- Language selector -->
+  <div class="relative ml-1">
+    <button id="langBtn" class="inline-flex items-center gap-1.5 text-sm font-medium
+          text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg px-2.5 py-1.5 transition"
+          data-i18n-title="header.language" title="Language">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+           stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 5h12M9 3v2m1.5 0C10.5 9 7.5 12 3 13m3-3c0 2 2.5 4 5 5M14 19l4-9 4 9m-7-2h6"/>
+      </svg>
+      <span id="langCurrent">EN</span>
+    </button>
+    <div id="langMenu" class="hidden absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-30"></div>
+  </div>
+
   <button id="toggleLogcat" class="ml-1 inline-flex items-center gap-1.5 text-sm font-medium
-        text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg px-2.5 py-1.5 transition" title="Toggle logcat panel">
+        text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg px-2.5 py-1.5 transition" data-i18n-title="nav.logcat" title="Toggle logcat panel">
     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
          stroke="currentColor" stroke-width="2">
       <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h10M4 18h7"/>
     </svg>
-    Logcat
+    <span data-i18n="nav.logcat">Logcat</span>
   </button>
 
   <button id="openScripts" class="ml-1 inline-flex items-center gap-1.5 text-sm font-medium
-        text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg px-2.5 py-1.5 transition" title="Run .bat scripts">
+        text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg px-2.5 py-1.5 transition" data-i18n-title="nav.scripts" title="Run .bat scripts">
     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
          stroke="currentColor" stroke-width="2">
       <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l3 3-3 3M13 15h3M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"/>
     </svg>
-    Scripts
+    <span data-i18n="nav.scripts">Scripts</span>
     <span id="scriptsBadge" class="hidden text-[10px] font-bold bg-green-600 text-white rounded-full px-1.5 py-0.5">0</span>
   </button>
 
   <button id="openTerminal" class="ml-1 inline-flex items-center gap-1.5 text-sm font-medium
-        text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg px-2.5 py-1.5 transition" title="ADB / Fastboot terminal">
+        text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg px-2.5 py-1.5 transition" data-i18n-title="nav.terminal" title="ADB / Fastboot terminal">
     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
          stroke="currentColor" stroke-width="2">
       <path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z"/>
       <path stroke-linecap="round" stroke-linejoin="round" d="M7 9l3 2.5L7 14M12.5 14H16"/>
     </svg>
-    Terminal
+    <span data-i18n="nav.terminal">Terminal</span>
+  </button>
+
+  <button id="openFiles" class="ml-1 inline-flex items-center gap-1.5 text-sm font-medium
+        text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg px-2.5 py-1.5 transition" data-i18n-title="nav.files" title="Duyệt file trên thiết bị">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+         stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+    </svg>
+    <span data-i18n="nav.files">Files</span>
   </button>
 </header>
+
+<!-- Token onboarding modal (shown on first visit / until a valid token is entered) -->
+<div id="onboardModal" class="hidden fixed inset-0 z-[60] bg-slate-900/70 backdrop-blur-sm grid place-items-center p-4">
+  <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+    <div class="px-6 pt-6 pb-4 text-center">
+      <div class="w-12 h-12 rounded-xl bg-blue-600 text-white grid place-items-center font-bold text-xl mx-auto mb-3">A</div>
+      <h2 class="text-lg font-semibold" data-i18n="onboard.title">Welcome to ADB Web Control</h2>
+      <p class="text-sm text-slate-500 mt-1" data-i18n="onboard.subtitle">Enter your access token to continue.</p>
+    </div>
+    <div class="px-6 pb-2 space-y-2">
+      <label class="text-xs font-medium text-slate-500" data-i18n="onboard.tokenLabel">Access token</label>
+      <input id="onboardToken" type="password" autocomplete="off"
+        class="w-full text-sm px-3 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+        data-i18n-ph="onboard.tokenPlaceholder" placeholder="Paste your token here">
+      <p id="onboardError" class="hidden text-xs text-red-600"></p>
+      <button id="onboardSubmit"
+        class="w-full text-sm font-medium px-3 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition disabled:opacity-50"
+        data-i18n="onboard.submit">Continue</button>
+    </div>
+    <!-- Setup guide -->
+    <div class="mt-3 px-6 py-4 bg-slate-50 border-t border-slate-100 text-[13px] text-slate-600 space-y-1.5">
+      <p class="font-semibold text-slate-700" data-i18n="onboard.guideTitle">How to set up your token</p>
+      <ol class="list-decimal list-inside space-y-1">
+        <li data-i18n="onboard.guideStep1">Open the .env file next to server.py.</li>
+        <li><span data-i18n="onboard.guideStep2">Set a line like AUTH_TOKEN=…</span> <code class="px-1 py-0.5 rounded bg-slate-200 text-slate-800 font-mono text-[11px]">AUTH_TOKEN=my-secret</code></li>
+        <li data-i18n="onboard.guideStep3">Restart the server, then paste the same token above.</li>
+      </ol>
+      <p class="text-[12px] text-slate-400 pt-1" data-i18n="onboard.guideNote">The token protects your device from unauthorized access. Keep it secret.</p>
+    </div>
+  </div>
+</div>
 
 <!-- Scripts modal -->
 <div id="scriptsModal" class="hidden fixed inset-0 z-40 bg-black/40 grid place-items-center p-4">
   <div class="bg-white w-full max-w-4xl h-[80vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
     <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-200">
-      <h2 class="font-semibold text-sm">Run .bat scripts</h2>
+      <h2 class="font-semibold text-sm" data-i18n="scripts.title">Run .bat scripts</h2>
       <span id="scriptDir" class="text-[11px] text-slate-400 font-mono truncate"></span>
       <span id="runningNow" class="text-[11px] text-green-700 font-medium truncate"></span>
       <button id="closeScripts" class="ml-auto w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-100 transition">✕</button>
@@ -76,8 +130,8 @@
       <!-- File list -->
       <div class="w-56 shrink-0 border-r border-slate-200 flex flex-col">
         <div class="px-3 py-2 flex items-center justify-between">
-          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Files</span>
-          <button id="refreshScripts" class="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50">Reload</button>
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide" data-i18n="scripts.files">Files</span>
+          <button id="refreshScripts" class="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50" data-i18n="scripts.reload">Reload</button>
         </div>
         <ul id="scriptList" class="flex-1 overflow-y-auto px-2 pb-2 space-y-1 text-sm"></ul>
       </div>
@@ -85,17 +139,17 @@
       <!-- Terminal -->
       <div class="flex-1 flex flex-col min-w-0">
         <div class="px-3 py-2 flex items-center gap-2 border-b border-slate-100">
-          <span id="runFile" class="text-xs font-mono text-slate-500 truncate flex-1">No script selected</span>
-          <span id="runState" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">idle</span>
-          <button id="runBtn" class="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40" disabled>Run</button>
-          <button id="stopBtn" class="text-xs px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 disabled:opacity-40" disabled>Stop</button>
+          <span id="runFile" class="text-xs font-mono text-slate-500 truncate flex-1" data-i18n="scripts.noSelected">No script selected</span>
+          <span id="runState" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500" data-i18n="scripts.idle">idle</span>
+          <button id="runBtn" class="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40" data-i18n="scripts.run" disabled>Run</button>
+          <button id="stopBtn" class="text-xs px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 disabled:opacity-40" data-i18n="scripts.stop" disabled>Stop</button>
         </div>
         <pre id="term" class="flex-1 overflow-auto m-0 p-3 bg-slate-900 text-slate-100 text-[12px] leading-snug font-mono whitespace-pre-wrap break-words"></pre>
         <div class="flex items-center gap-2 p-2 border-t border-slate-200">
-          <input id="stdinBox" type="text" placeholder="Type input, press Enter to send to stdin…"
+          <input id="stdinBox" type="text" data-i18n-ph="scripts.stdinPlaceholder" placeholder="Type input, press Enter to send to stdin…"
             class="flex-1 text-sm px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none font-mono" disabled>
-          <button id="sendStdin" class="text-sm px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 disabled:opacity-40" disabled>Send</button>
-          <button id="clearTerm" class="text-sm px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Clear</button>
+          <button id="sendStdin" class="text-sm px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 disabled:opacity-40" data-i18n="scripts.send" disabled>Send</button>
+          <button id="clearTerm" class="text-sm px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50" data-i18n="scripts.clear">Clear</button>
         </div>
       </div>
     </div>
@@ -106,9 +160,9 @@
 <div id="terminalModal" class="hidden fixed inset-0 z-40 bg-black/40 grid place-items-center p-4">
   <div class="bg-white w-full max-w-4xl h-[80vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
     <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-200">
-      <h2 class="font-semibold text-sm">ADB / Fastboot Terminal</h2>
-      <span id="termState" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">idle</span>
-      <span class="text-[11px] text-slate-400">only <code>adb</code> &amp; <code>fastboot</code> are allowed</span>
+      <h2 class="font-semibold text-sm" data-i18n="terminal.title">ADB / Fastboot Terminal</h2>
+      <span id="termState" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500" data-i18n="terminal.idle">idle</span>
+      <span class="text-[11px] text-slate-400" data-i18n="terminal.allowed">only adb &amp; fastboot are allowed</span>
       <button id="closeTerminal" class="ml-auto w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-100 transition">✕</button>
     </div>
 
@@ -122,7 +176,7 @@
       <button class="quickcmd" data-cmd="fastboot reboot">fastboot reboot</button>
       <button class="quickcmd" data-cmd="adb shell getprop ro.product.model">getprop model</button>
       <label class="ml-auto inline-flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-        <input type="checkbox" id="termTarget" class="rounded border-slate-300 text-blue-600"> Target selected device (-s)
+        <input type="checkbox" id="termTarget" class="rounded border-slate-300 text-blue-600"> <span data-i18n="terminal.targetDevice">Target selected device (-s)</span>
       </label>
     </div>
 
@@ -130,116 +184,169 @@
 
     <div class="flex items-center gap-2 p-2 border-t border-slate-200">
       <span class="text-xs text-slate-400 font-mono pl-1">&gt;</span>
-      <input id="termIn" type="text" placeholder="e.g. adb shell ls /sdcard   (↑/↓ history)"
+      <input id="termIn" type="text" data-i18n-ph="terminal.placeholder" placeholder="e.g. adb shell ls /sdcard   (↑/↓ history)"
         class="flex-1 text-sm px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none font-mono">
-      <button id="termRun" class="text-sm px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Run</button>
-      <button id="termStop" class="text-sm px-3 py-2 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 disabled:opacity-40" disabled>Stop</button>
-      <button id="termClear" class="text-sm px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Clear</button>
+      <button id="termRun" class="text-sm px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" data-i18n="terminal.run">Run</button>
+      <button id="termStop" class="text-sm px-3 py-2 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 disabled:opacity-40" data-i18n="terminal.stop" disabled>Stop</button>
+      <button id="termClear" class="text-sm px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50" data-i18n="terminal.clear">Clear</button>
     </div>
+  </div>
+</div>
+
+<!-- Files modal -->
+<div id="filesModal" class="hidden fixed inset-0 z-40 bg-black/40 grid place-items-center p-4">
+  <div class="bg-white w-full max-w-4xl h-[82vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
+    <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-200">
+      <h2 class="font-semibold text-sm" data-i18n="files.title">Quản lý file trên thiết bị</h2>
+      <span id="filesState" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500" data-i18n="files.idle">idle</span>
+      <button id="closeFiles" class="ml-auto w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-100 transition">✕</button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="px-3 py-2 border-b border-slate-100 flex items-center gap-1.5 flex-wrap">
+      <button id="filesUp" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50" data-i18n="files.up">↑ Lên</button>
+      <button id="filesReload" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50" data-i18n="files.reload">Tải lại</button>
+      <span class="w-px h-5 bg-slate-200 mx-0.5"></span>
+      <button class="filesQuick text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50" data-path="/sdcard">/sdcard</button>
+      <button class="filesQuick text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50" data-path="/sdcard/Download">Download</button>
+      <button class="filesQuick text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50" data-path="/sdcard/DCIM">DCIM</button>
+      <button class="filesQuick text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50" data-path="/" data-i18n="files.root">/ (root)</button>
+      <span class="w-px h-5 bg-slate-200 mx-0.5"></span>
+      <button id="filesMkdir" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50" data-i18n="files.mkdir">+ Thư mục</button>
+      <button id="filesUpload" class="text-xs px-2.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700" data-i18n="files.upload">⤒ Upload</button>
+      <input id="filesUploadInput" type="file" class="hidden" multiple>
+    </div>
+
+    <!-- Breadcrumb / path -->
+    <div class="px-3 py-1.5 border-b border-slate-100 flex items-center gap-1">
+      <input id="filesPath" type="text" spellcheck="false"
+        class="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none font-mono"
+        placeholder="/sdcard">
+      <button id="filesGo" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50" data-i18n="files.go">Đi</button>
+    </div>
+
+    <!-- File list -->
+    <div class="flex-1 overflow-auto min-h-0">
+      <table class="w-full text-sm table-fixed">
+        <thead class="sticky top-0 bg-slate-50 text-slate-400 text-[11px] uppercase tracking-wide">
+          <tr>
+            <th class="text-left font-semibold px-3 py-2" data-i18n="files.colName">Tên</th>
+            <th class="text-right font-semibold px-3 py-2 w-20" data-i18n="files.colSize">Kích thước</th>
+            <th class="text-left font-semibold px-3 py-2 w-32 hidden sm:table-cell" data-i18n="files.colModified">Sửa đổi</th>
+            <th class="px-3 py-2 w-28" data-i18n="files.colActions">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="filesList"></tbody>
+      </table>
+      <div id="filesEmpty" class="hidden text-center text-slate-400 text-sm py-10" data-i18n="files.empty">Thư mục trống</div>
+      <div id="filesError" class="hidden text-center text-red-500 text-sm py-10 px-4 break-words"></div>
+    </div>
+
+    <!-- Upload progress / status bar -->
+    <div id="filesBar" class="hidden px-3 py-2 border-t border-slate-200 text-xs text-slate-600"></div>
   </div>
 </div>
 
 <!-- Body: left sidebar + screen -->
 <div class="flex-1 flex min-h-0">
-
   <!-- Sidebar -->
   <aside id="sidebar" class="w-80 shrink-0 bg-white border-r border-slate-200 overflow-y-auto overflow-x-hidden">
     <div class="w-80 p-4 space-y-6">
 
       <!-- Connection -->
       <div class="space-y-2.5">
-        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Connection</p>
-        <input id="token" type="password" placeholder="Token"
-          class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide" data-i18n="section.connection">Connection</p>
+        <!-- Token đã nhập ở màn hình onboarding; giữ input ẩn để các module đọc giá trị. -->
+        <input id="token" type="hidden">
         <div class="flex items-center gap-2">
           <select id="devices"
             class="flex-1 text-sm px-3 py-2 rounded-lg border border-slate-300 bg-white focus:border-blue-500 outline-none">
-            <option value="">(device)</option>
+            <option value="" data-i18n="conn.device">(device)</option>
           </select>
           <button id="refresh"
-            class="text-sm px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 transition">Load</button>
+            class="text-sm px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 transition" data-i18n="conn.load">Load</button>
         </div>
         <button id="connect"
-          class="w-full text-sm font-medium px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
+          class="w-full text-sm font-medium px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition" data-i18n="conn.connect">
           Connect</button>
         <label class="inline-flex items-center gap-2 text-xs text-slate-600 select-none cursor-pointer pt-0.5">
-          <input type="checkbox" id="kbd" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"> Capture keyboard
+          <input type="checkbox" id="kbd" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"> <span data-i18n="conn.captureKbd">Capture keyboard</span>
         </label>
         <div>
-          <label class="text-xs text-slate-600">Your name (shown to others)</label>
-          <input id="clientName" type="text" placeholder="e.g. Alice"
+          <label class="text-xs text-slate-600" data-i18n="conn.yourName">Your name (shown to others)</label>
+          <input id="clientName" type="text" data-i18n-ph="conn.yourNamePlaceholder" placeholder="e.g. Alice"
             class="w-full mt-1 text-sm px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 outline-none">
         </div>
       </div>
 
       <!-- Video -->
       <div class="space-y-2.5">
-        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Video</p>
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide" data-i18n="section.video">Video</p>
 
         <div>
-          <label class="text-xs text-slate-600">Engine</label>
+          <label class="text-xs text-slate-600" data-i18n="video.engine">Engine</label>
           <select id="engine"
             class="w-full mt-1 text-sm px-3 py-2 rounded-lg border border-slate-300 bg-white focus:border-blue-500 outline-none">
-            <option value="scrcpy">scrcpy (low latency, FPS cap)</option>
-            <option value="screenrecord">screenrecord (no setup)</option>
+            <option value="scrcpy" data-i18n="video.engineScrcpy">scrcpy (low latency, FPS cap)</option>
+            <option value="screenrecord" data-i18n="video.engineScreenrecord">screenrecord (no setup)</option>
           </select>
         </div>
 
         <div id="verRow">
-          <label class="text-xs text-slate-600">scrcpy version (auto-downloaded)</label>
+          <label class="text-xs text-slate-600" data-i18n="video.scrcpyVer">scrcpy version (auto-downloaded)</label>
           <input id="scrcpyVer" type="text" inputmode="decimal" placeholder="2.4"
             class="w-full mt-1 text-sm px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
-          <p class="text-[11px] text-slate-400 leading-snug mt-1">Downloaded once from GitHub releases on first use.</p>
+          <p class="text-[11px] text-slate-400 leading-snug mt-1" data-i18n="video.scrcpyVerNote">Downloaded once from GitHub releases on first use.</p>
         </div>
 
         <div class="grid grid-cols-2 gap-1.5" id="presets">
-          <button data-max="640"  data-rate="2"  class="preset text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 transition">Smooth</button>
-          <button data-max="1024" data-rate="4"  class="preset text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 transition">Balanced</button>
-          <button data-max="1280" data-rate="8"  class="preset text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 transition">Sharp</button>
-          <button data-max="0"    data-rate="12" class="preset text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 transition">Original</button>
+          <button data-max="640"  data-rate="2"  class="preset text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 transition" data-i18n="video.presetSmooth">Smooth</button>
+          <button data-max="1024" data-rate="4"  class="preset text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 transition" data-i18n="video.presetBalanced">Balanced</button>
+          <button data-max="1280" data-rate="8"  class="preset text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 transition" data-i18n="video.presetSharp">Sharp</button>
+          <button data-max="0"    data-rate="12" class="preset text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 transition" data-i18n="video.presetOriginal">Original</button>
         </div>
 
         <div>
-          <label class="text-xs text-slate-600">Resolution (long side)</label>
+          <label class="text-xs text-slate-600" data-i18n="video.resolution">Resolution (long side)</label>
           <select id="maxsize"
             class="w-full mt-1 text-sm px-3 py-2 rounded-lg border border-slate-300 bg-white focus:border-blue-500 outline-none">
-            <option value="0">Original (sharpest, slowest)</option>
-            <option value="1280">1280 px</option>
-            <option value="1024">1024 px</option>
-            <option value="720">720 px</option>
-            <option value="640">640 px</option>
-            <option value="480">480 px (fastest)</option>
+            <option value="0" data-i18n="res.original">Original (sharpest, slowest)</option>
+            <option value="1280" data-i18n="res.1280">1280 px</option>
+            <option value="1024" data-i18n="res.1024">1024 px</option>
+            <option value="720" data-i18n="res.720">720 px</option>
+            <option value="640" data-i18n="res.640">640 px</option>
+            <option value="480" data-i18n="res.480">480 px (fastest)</option>
           </select>
         </div>
 
         <div>
           <label class="text-xs text-slate-600 flex justify-between">
-            <span>Bitrate</span><span id="rateLabel" class="font-medium text-slate-700">8 Mbps</span>
+            <span data-i18n="video.bitrate">Bitrate</span><span id="rateLabel" class="font-medium text-slate-700">8 Mbps</span>
           </label>
           <input id="bitrate" type="range" min="1" max="16" step="1" value="8" class="w-full mt-1">
         </div>
 
         <div>
           <label class="text-xs text-slate-600 flex justify-between">
-            <span>Max FPS</span><span id="fpsLabel" class="font-medium text-slate-700">30 fps</span>
+            <span data-i18n="video.maxfps">Max FPS</span><span id="fpsLabel" class="font-medium text-slate-700">30 fps</span>
           </label>
           <input id="fps" type="range" min="5" max="60" step="5" value="30" class="w-full mt-1">
-          <p id="fpsNote" class="text-[11px] text-slate-400 leading-snug mt-1">FPS cap applies to the scrcpy engine only.</p>
+          <p id="fpsNote" class="text-[11px] text-slate-400 leading-snug mt-1" data-i18n="video.fpsNote">FPS cap applies to the scrcpy engine only.</p>
         </div>
 
-        <p class="text-[11px] text-slate-400 leading-snug">Lower resolution reduces latency the most. Changing settings reconnects automatically.</p>
+        <p class="text-[11px] text-slate-400 leading-snug" data-i18n="video.note">Lower resolution reduces latency the most. Changing settings reconnects automatically.</p>
       </div>
 
       <!-- Hardware keys -->
       <div class="space-y-2.5">
-        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Hardware keys</p>
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide" data-i18n="section.hwkeys">Hardware keys</p>
         <div class="grid grid-cols-3 gap-1.5">
-          <button data-key="Escape"    class="navbtn">◀ Back</button>
-          <button data-key="Home"      class="navbtn">● Home</button>
-          <button data-key="AppSwitch" class="navbtn">■ Recent</button>
-          <button data-key="VolumeUp"  class="navbtn">Vol +</button>
-          <button data-key="VolumeDown"class="navbtn">Vol −</button>
-          <button data-key="Power"     class="navbtn">⏻ Power</button>
+          <button data-key="Escape"    class="navbtn" data-i18n="key.back">◀ Back</button>
+          <button data-key="Home"      class="navbtn" data-i18n="key.home">● Home</button>
+          <button data-key="AppSwitch" class="navbtn" data-i18n="key.recent">■ Recent</button>
+          <button data-key="VolumeUp"  class="navbtn" data-i18n="key.volup">Vol +</button>
+          <button data-key="VolumeDown"class="navbtn" data-i18n="key.voldown">Vol −</button>
+          <button data-key="Power"     class="navbtn" data-i18n="key.power">⏻ Power</button>
         </div>
       </div>
     </div>
@@ -249,15 +356,19 @@
   <main class="flex-1 relative grid place-items-center overflow-hidden p-3 bg-slate-100 min-w-0">
     <canvas id="screen" width="360" height="780"
       class="block max-h-[calc(100vh-90px)] max-w-full rounded-2xl bg-black shadow-2xl ring-1 ring-black/10 cursor-pointer"></canvas>
-    <div id="overlay" class="absolute inset-0 grid place-items-center text-center px-6 text-slate-400 text-sm pointer-events-none">
+    <div id="overlay" class="absolute inset-0 grid place-items-center text-center px-6 text-slate-400 text-sm pointer-events-none whitespace-pre-line" data-i18n="overlay.enterToken">
       Enter token and click Connect
     </div>
 
     <!-- Latency stats (bottom-right) -->
     <div id="stats" class="hidden absolute bottom-3 right-3 bg-black/70 text-white rounded-lg
-          px-3 py-1.5 text-[11px] font-mono leading-tight shadow-lg select-none">
+          px-3 py-1.5 text-[11px] font-mono leading-tight shadow-lg select-none cursor-pointer"
+         data-i18n-title="stats.clientsTitle" title="Click to show connected clients">
       <div><span id="pingVal" class="text-green-400">–</span> ms</div>
       <div class="text-slate-300"><span id="fpsVal">–</span> fps · <span id="mbpsVal">–</span> Mbps</div>
+      <div id="clientsRow" class="hidden text-cyan-300 mt-0.5 pt-0.5 border-t border-white/15">
+        <span id="clientsVal">–</span> <span data-i18n="stats.connected">connected</span>
+      </div>
     </div>
   </main>
 
@@ -267,25 +378,25 @@
     <div id="logResize" class="absolute left-0 top-0 h-full w-1.5 -ml-0.5 cursor-col-resize z-10
           hover:bg-blue-400/60 active:bg-blue-500" title="Drag to resize"></div>
     <div class="px-3 py-2 border-b border-slate-200 flex items-center gap-2">
-      <h2 class="font-semibold text-sm">Logcat</h2>
-      <span id="logState" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">stopped</span>
+      <h2 class="font-semibold text-sm" data-i18n="logcat.title">Logcat</h2>
+      <span id="logState" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500" data-i18n="logcat.stopped">stopped</span>
       <span class="ml-auto text-[11px] text-slate-400 font-mono"><span id="logShown">0</span>/<span id="logTotal">0</span></span>
     </div>
 
     <!-- Controls -->
     <div class="px-3 py-2 border-b border-slate-100 space-y-2">
       <div class="flex items-center gap-1.5 flex-wrap">
-        <button id="logStart" class="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Start</button>
-        <button id="logStop"  class="text-xs px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 disabled:opacity-40" disabled>Stop</button>
-        <button id="logClear" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50">Clear</button>
-        <button id="logDownload" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50">Download</button>
+        <button id="logStart" class="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700" data-i18n="logcat.start">Start</button>
+        <button id="logStop"  class="text-xs px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 disabled:opacity-40" data-i18n="logcat.stop" disabled>Stop</button>
+        <button id="logClear" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50" data-i18n="logcat.clear">Clear</button>
+        <button id="logDownload" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50" data-i18n="logcat.download">Download</button>
         <label class="inline-flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer ml-1">
-          <input type="checkbox" id="logAutoscroll" class="rounded border-slate-300 text-blue-600" checked> Auto-scroll
+          <input type="checkbox" id="logAutoscroll" class="rounded border-slate-300 text-blue-600" checked> <span data-i18n="logcat.autoscroll">Auto-scroll</span>
         </label>
-        <button id="logToBottom" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50">↓ Bottom</button>
+        <button id="logToBottom" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50" data-i18n="logcat.toBottom">↓ Bottom</button>
       </div>
       <div class="flex items-center gap-1.5 flex-wrap">
-        <span class="text-[11px] text-slate-400 uppercase tracking-wide">Level</span>
+        <span class="text-[11px] text-slate-400 uppercase tracking-wide" data-i18n="logcat.level">Level</span>
         <button data-lvl="V" class="lvlbtn">V</button>
         <button data-lvl="D" class="lvlbtn">D</button>
         <button data-lvl="I" class="lvlbtn">I</button>
@@ -293,11 +404,11 @@
         <button data-lvl="E" class="lvlbtn">E</button>
       </div>
       <div class="flex items-center gap-1.5">
-        <input id="logTag" type="text" placeholder="Tags (comma-separated)…"
+        <input id="logTag" type="text" data-i18n-ph="logcat.tagsPlaceholder" placeholder="Tags (comma-separated)…"
           class="w-48 text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 focus:border-blue-500 outline-none font-mono">
-        <input id="logText" type="text" placeholder="Filter by text…"
+        <input id="logText" type="text" data-i18n-ph="logcat.textPlaceholder" placeholder="Filter by text…"
           class="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 focus:border-blue-500 outline-none font-mono">
-        <input id="logHi" type="text" placeholder="Highlight…"
+        <input id="logHi" type="text" data-i18n-ph="logcat.highlightPlaceholder" placeholder="Highlight…"
           class="w-32 text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 focus:border-blue-500 outline-none font-mono">
       </div>
     </div>

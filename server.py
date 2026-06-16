@@ -14,10 +14,13 @@ Bảo mật: mọi truy cập cần AUTH_TOKEN. Mặc định chỉ lắng nghe 
 import json
 import mimetypes
 import os
+import posixpath
+import tempfile
+import urllib.parse
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Header
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Header, UploadFile, File, Form
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 import anyio
 
@@ -60,6 +63,9 @@ os.makedirs(os.path.dirname(STDIN_LOG), exist_ok=True)
 
 app = FastAPI(title="ADB Web Control")
 
+# Số client đang kết nối tới luồng video /ws (để hiển thị khi hover/click vào ô ping).
+WS_CLIENTS = 0
+
 
 @app.middleware("http")
 async def no_cache_assets(request, call_next):
@@ -89,6 +95,19 @@ async def index():
 async def api_devices(token: str = Query("")):
     check_token(token)
     return JSONResponse(await adb.list_devices())
+
+
+@app.get("/api/device-status")
+async def api_device_status(token: str = Query(""), serial: str = Query("")):
+    """Trạng thái chi tiết của thiết bị (no_device/unauthorized/offline/booting/ready)."""
+    check_token(token)
+    return JSONResponse(await adb.probe_device(serial or None))
+
+
+@app.get("/api/verify-token")
+async def api_verify_token(token: str = Query("")):
+    """Kiểm tra token có khớp AUTH_TOKEN không (dùng cho màn hình onboarding)."""
+    return JSONResponse({"ok": bool(AUTH_TOKEN) and token == AUTH_TOKEN})
 
 
 def _norm(p: str) -> str:
@@ -172,6 +191,127 @@ async def api_scripts(token: str = Query("")):
     """Liệt kê các .bat có thể chạy (thư mục scripts/ + manifest)."""
     check_token(token)
     return JSONResponse({"dir": BAT_DIR, "manifest": SCRIPTS_MANIFEST, "items": list_scripts()})
+
+
+# ---------------------------------------------------------------------------
+# Quản lý file trên thiết bị (duyệt / tải / upload / mkdir / xoá / đổi tên)
+# ---------------------------------------------------------------------------
+
+def _serial_or_none(serial: str):
+    return serial or None
+
+
+@app.get("/api/files")
+async def api_files_list(token: str = Query(""), serial: str = Query(""), path: str = Query("/sdcard")):
+    """Liệt kê nội dung một thư mục trên thiết bị."""
+    check_token(token)
+    try:
+        result = await adb.list_dir(_serial_or_none(serial), path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi liệt kê: {e}")
+    return JSONResponse(result)
+
+
+@app.get("/api/files/download")
+async def api_files_download(token: str = Query(""), serial: str = Query(""), path: str = Query("")):
+    """Stream một file từ thiết bị về trình duyệt (tải xuống)."""
+    check_token(token)
+    if not path:
+        raise HTTPException(status_code=400, detail="Thiếu path.")
+    serial = _serial_or_none(serial)
+    info = await adb.stat_remote(serial, path)
+    if not info["exists"]:
+        raise HTTPException(status_code=404, detail="File không tồn tại trên thiết bị.")
+    if info["is_dir"]:
+        raise HTTPException(status_code=400, detail="Không thể tải thư mục (chỉ hỗ trợ file đơn).")
+
+    norm = info["path"]
+    filename = posixpath.basename(norm) or "download"
+    # RFC 5987: hỗ trợ tên file có ký tự unicode.
+    quoted = urllib.parse.quote(filename)
+    disposition = f"attachment; filename*=UTF-8''{quoted}"
+
+    return StreamingResponse(
+        adb.stream_pull(serial, norm),
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": disposition},
+    )
+
+
+@app.post("/api/files/upload")
+async def api_files_upload(
+    token: str = Form(""),
+    serial: str = Form(""),
+    dest: str = Form(""),
+    file: UploadFile = File(...),
+):
+    """Nhận 1 file từ trình duyệt, lưu tạm rồi `adb push` lên thư mục dest."""
+    check_token(token)
+    if not dest:
+        raise HTTPException(status_code=400, detail="Thiếu thư mục đích.")
+    serial = _serial_or_none(serial)
+    name = posixpath.basename(file.filename or "upload")
+    if not name or name in (".", ".."):
+        raise HTTPException(status_code=400, detail="Tên file không hợp lệ.")
+    remote_path = adb.normalize_remote(dest.rstrip("/") + "/" + name)
+
+    # Lưu nội dung upload ra file tạm trên máy chủ rồi push (adb push cần đường dẫn thật).
+    tmp_path = ""
+    try:
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp_path = tmp.name
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                tmp.write(chunk)
+        ok, msg = await adb.push_file(serial, tmp_path, remote_path)
+    finally:
+        await file.close()
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+    if not ok:
+        raise HTTPException(status_code=500, detail=f"Upload thất bại: {msg}")
+    return JSONResponse({"ok": True, "path": remote_path})
+
+
+@app.post("/api/files/mkdir")
+async def api_files_mkdir(token: str = Form(""), serial: str = Form(""), path: str = Form("")):
+    """Tạo thư mục mới (mkdir -p)."""
+    check_token(token)
+    if not path:
+        raise HTTPException(status_code=400, detail="Thiếu path.")
+    ok, msg = await adb.mkdir_remote(_serial_or_none(serial), path)
+    if not ok:
+        raise HTTPException(status_code=500, detail=f"Tạo thư mục thất bại: {msg}")
+    return JSONResponse({"ok": True})
+
+
+@app.post("/api/files/delete")
+async def api_files_delete(token: str = Form(""), serial: str = Form(""), path: str = Form("")):
+    """Xoá file hoặc thư mục (đệ quy)."""
+    check_token(token)
+    if not path:
+        raise HTTPException(status_code=400, detail="Thiếu path.")
+    ok, msg = await adb.remove_remote(_serial_or_none(serial), path)
+    if not ok:
+        raise HTTPException(status_code=500, detail=f"Xoá thất bại: {msg}")
+    return JSONResponse({"ok": True})
+
+
+@app.post("/api/files/rename")
+async def api_files_rename(token: str = Form(""), serial: str = Form(""), src: str = Form(""), dst: str = Form("")):
+    """Đổi tên / di chuyển (mv)."""
+    check_token(token)
+    if not src or not dst:
+        raise HTTPException(status_code=400, detail="Thiếu src hoặc dst.")
+    ok, msg = await adb.move_remote(_serial_or_none(serial), src, dst)
+    if not ok:
+        raise HTTPException(status_code=500, detail=f"Đổi tên thất bại: {msg}")
+    return JSONResponse({"ok": True})
 
 
 @app.websocket("/events")
@@ -334,6 +474,9 @@ async def ws_endpoint(
         return
     await websocket.accept()
 
+    global WS_CLIENTS
+    WS_CLIENTS += 1
+
     serial = serial or None
     use_bitrate = bitrate if bitrate > 0 else VIDEO_BITRATE
 
@@ -412,7 +555,7 @@ async def ws_endpoint(
                 continue
             # Ping/pong để client đo độ trễ vòng (RTT) - echo lại nguyên timestamp.
             if data.get("type") == "ping":
-                await websocket.send_text(json.dumps({"type": "pong", "t": data.get("t")}))
+                await websocket.send_text(json.dumps({"type": "pong", "t": data.get("t"), "clients": WS_CLIENTS}))
                 continue
             await handle_input(serial, data)
 
@@ -433,6 +576,8 @@ async def ws_endpoint(
         pass
     except Exception as e:
         print(f"[ws] kết thúc phiên: {e!r}")
+    finally:
+        WS_CLIENTS = max(0, WS_CLIENTS - 1)
 
 
 async def handle_input(serial, data: dict) -> None:

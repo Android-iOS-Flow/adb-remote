@@ -1,6 +1,10 @@
 // settings.js — Nạp/lưu cài đặt và nối các ô điều khiển chất lượng.
 
 import { $, LS } from "./core.js";
+import { t, onLangChange } from "./i18n.js";
+
+function rateText() { return t("unit.mbps", { n: $("bitrate").value }); }
+function fpsText() { return t("unit.fps", { n: $("fps").value }); }
 
 export function updateFpsState() {
   const isScrcpy = $("engine").value === "scrcpy";
@@ -18,8 +22,8 @@ export function loadSettings() {
   $("bitrate").value   = LS.get("bitrate", "8");
   $("fps").value       = LS.get("fps", "30");
   $("kbd").checked     = LS.get("kbd", "0") === "1";
-  $("rateLabel").textContent = $("bitrate").value + " Mbps";
-  $("fpsLabel").textContent  = $("fps").value + " fps";
+  $("rateLabel").textContent = rateText();
+  $("fpsLabel").textContent  = fpsText();
   updateFpsState();
 }
 
@@ -37,8 +41,8 @@ export function saveSettings() {
 // reconnectIfConnected: callback (từ main) để kết nối lại khi đổi chất lượng.
 export function initSettings(reconnectIfConnected) {
   const onQualityChange = () => {
-    $("rateLabel").textContent = $("bitrate").value + " Mbps";
-    $("fpsLabel").textContent  = $("fps").value + " fps";
+    $("rateLabel").textContent = rateText();
+    $("fpsLabel").textContent  = fpsText();
     updateFpsState();
     saveSettings();
     reconnectIfConnected();
@@ -46,9 +50,9 @@ export function initSettings(reconnectIfConnected) {
 
   $("engine").onchange  = onQualityChange;
   $("maxsize").onchange = onQualityChange;
-  $("bitrate").oninput  = () => { $("rateLabel").textContent = $("bitrate").value + " Mbps"; };
+  $("bitrate").oninput  = () => { $("rateLabel").textContent = rateText(); };
   $("bitrate").onchange = onQualityChange;
-  $("fps").oninput      = () => { $("fpsLabel").textContent = $("fps").value + " fps"; };
+  $("fps").oninput      = () => { $("fpsLabel").textContent = fpsText(); };
   $("fps").onchange     = onQualityChange;
   $("kbd").onchange     = saveSettings;
   $("token").onchange   = saveSettings;
@@ -60,6 +64,12 @@ export function initSettings(reconnectIfConnected) {
       $("bitrate").value = b.dataset.rate;
       onQualityChange();
     };
+  });
+
+  // Cập nhật nhãn Mbps/fps khi đổi ngôn ngữ.
+  onLangChange(() => {
+    $("rateLabel").textContent = rateText();
+    $("fpsLabel").textContent  = fpsText();
   });
 
   // Thu/giãn sidebar cài đặt.
