@@ -1,0 +1,1 @@
+adb install "C:\Users\leson\Downloads\ABDM\Programs\Duck.Detector-2026.06.07-64d32c0c49b0.apk"
