@@ -9,11 +9,40 @@ let reconnectTimer = null;
 const running = new Map();        // id -> {id, path, label, who, started}
 const changeCbs = [];            // callback khi danh sách đang-chạy thay đổi
 
-// Tên máy hiện tại (để biết "ai" chạy). Tạo ngẫu nhiên nếu chưa đặt.
+// Tên máy hiện tại (để biết "ai" chạy).
+// Mặc định được tính CỐ ĐỊNH từ đặc điểm máy/trình duyệt (deterministic) nên
+// cùng một máy luôn ra cùng một tên; người dùng vẫn có thể tự đặt tên khác.
 export function clientName() {
   let n = LS.get("clientName", "");
-  if (!n) { n = "PC-" + Math.random().toString(36).slice(2, 6); LS.set("clientName", n); }
+  if (!n) { n = "PC-" + machineKey(); LS.set("clientName", n); }
   return n;
+}
+
+// Khoá cố định theo máy: băm các thuộc tính ổn định của trình duyệt/thiết bị.
+// Không phụ thuộc Math.random nên không đổi giữa các lần tải trang.
+function machineKey() {
+  const nav = navigator;
+  const parts = [
+    nav.userAgent || "",
+    nav.platform || "",
+    nav.language || "",
+    (nav.languages || []).join(","),
+    String(nav.hardwareConcurrency || ""),
+    String(nav.maxTouchPoints || ""),
+    `${screen.width}x${screen.height}x${screen.colorDepth}`,
+    String(new Date().getTimezoneOffset()),
+  ];
+  return hash36(parts.join("|"));
+}
+
+// Băm chuỗi -> 4 ký tự base36 (FNV-1a 32-bit), ổn định và gọn.
+function hash36(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(36).slice(-4).padStart(4, "0");
 }
 
 export function getRunning() { return running; }
